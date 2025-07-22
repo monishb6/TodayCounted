@@ -1,0 +1,265 @@
+body {
+    font-family: sans-serif;
+    background-color: #000000;
+    color: #ffffff;
+    padding: 2rem;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: #000000;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: background-color 0.3s;
+}
+
+h1 {
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.add-habit-container {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+#habit-input {
+    padding: 0.5rem;
+    font-size: 1rem;
+    border: 1px solid #444444;
+    border-radius: 5px;
+    width: 60%;
+    background-color: #000000;
+    color: #ffffff;
+}
+
+button {
+    background-color: #8e44ad;
+    color: #ffffff;
+    border: none;
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+button:disabled {
+    background-color: #333333;
+    color: #bbbbbb;
+    cursor: not-allowed;
+}
+
+.habit-tracker {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border: 1px solid #222222;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    transition: border-color 0.3s;
+    background-color: #111111;
+}
+
+.habit-info {
+    flex-grow: 1;
+}
+
+.habit-name {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.habit-count {
+    font-size: 2rem;
+    color: #ffffff;
+}
+
+.habit-start-date {
+    color: #bbbbbb;
+    font-style: italic;
+}
+
+.habit-controls button {
+    margin-left: 0.5rem;
+    background-color: #8e44ad;
+}
+
+.habit-controls .delete-button {
+    background-color: #444444;
+}
+
+.calendar-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #444444;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    text-align: center;
+}
+
+.calendar-day {
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.day-name {
+    font-weight: bold;
+    color: #bbbbbb;
+}
+
+.day-cell {
+    background-color: #333333;
+    color: #dddddd;
+}
+
+.day-cell.completed {
+    background-color: #27ae60; /* Green */
+    color: white;
+    font-weight: bold;
+}
+
+.day-cell.missed {
+    background-color: #c0392b; /* Red */
+    color: white;
+}
+
+.day-cell.today {
+    border: 2px solid #8e44ad;
+}
+
+.day-cell.empty {
+    background-color: transparent;
+}
+
+.recent-activity-bar {
+    display: flex;
+    gap: 6px;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.recent-activity-day {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #333333;
+    color: #bbbbbb;
+    border: 1px solid #222222;
+    font-size: 0;
+}
+
+.recent-activity-day.completed {
+    background-color: #27ae60;
+}
+
+.recent-activity-day.missed {
+    background-color: #c0392b;
+}
+
+.recent-activity-day.today {
+    border: 2px solid #8e44ad;
+}
+
+.show-calendar-btn {
+    background-color: #444444;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.3rem 0.7rem;
+    margin-top: 0.5rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: background 0.2s;
+}
+
+.show-calendar-btn.active {
+    background-color: #8e44ad;
+}
+
+.calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.calendar-nav-btn {
+    background: #444444;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.2rem 0.7rem;
+    cursor: pointer;
+    font-size: 1rem;
+    margin: 0 0.2rem;
+    transition: background 0.2s;
+}
+
+.calendar-start-date {
+    color: #bbbbbb;
+    font-style: italic;
+    margin-bottom: 0.5rem;
+    display: block;
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 0.5rem;
+        border-radius: 0;
+        box-shadow: none;
+        max-width: 100vw;
+    }
+    h1 {
+        font-size: 1.5rem;
+    }
+    .habit-tracker {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem 0.5rem;
+    }
+    .habit-info {
+        margin-bottom: 0.5rem;
+    }
+    .recent-activity-bar {
+        gap: 3px;
+        justify-content: center;
+    }
+    .recent-activity-day {
+        width: 14px;
+        height: 14px;
+    }
+    .calendar-grid {
+        gap: 2px;
+        font-size: 0.85rem;
+    }
+    .calendar-day {
+        padding: 0.2rem;
+    }
+    .show-calendar-btn, .calendar-nav-btn {
+        font-size: 0.85rem;
+        padding: 0.2rem 0.5rem;
+    }
+    #habit-input {
+        width: 95%;
+        font-size: 1rem;
+        padding: 0.4rem;
+    }
+    button, .habit-controls button {
+        font-size: 1rem;
+        padding: 0.5rem 0.7rem;
+    }
+} 
