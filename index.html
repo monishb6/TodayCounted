@@ -5,32 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TodayCounted</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#8e44ad">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
+    <meta name="theme-color" content="#232428">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css?family=Inter:400,600,700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>Habit Tracker</h1>
-        <div class="add-habit-container">
-            <h3>Add a New Habit</h3>
-            <input type="text" id="habit-input" placeholder="e.g., Exercise daily">
-            <button id="add-habit-button">Add Habit</button>
+    <header class="top-bar">
+        <div class="logo-title">
+            <img src="icon-192.png" alt="TodayCounted Logo" class="logo">
+            <span class="app-title">TodayCounted</span>
         </div>
-        <div id="habits-list">
-            <!-- Habit trackers will be dynamically added here -->
+        <div class="top-bar-actions">
+            <button class="add-goal-btn" aria-label="Add Goal">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b48be4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button class="settings-btn" aria-label="Settings">
+                <!-- Modern minimal settings cog SVG -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09A1.65 1.65 0 0 0 9 3.09V3a2 2 0 0 1 4 0v.09c0 .66.42 1.25 1 1.51a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09c0 .66.42 1.25 1 1.51H21a2 2 0 0 1 0 4h-.09c-.66 0-1.25.42-1.51 1z"/></svg>
+            </button>
         </div>
+    </header>
+    <main>
+        <section class="motivational-quote">
+            <blockquote>Small daily improvements are the key to success.</blockquote>
+        </section>
+        <section class="goals-list" id="goals-list">
+            <!-- Cards will be rendered by JS. New layout: title top left, edit top right, status bar below, streak (fire emoji) right of bar, mark done bottom right. -->
+        </section>
+        <section class="statistics-panel">
+            <div class="stat-item">
+                <span class="stat-label">Longest Streak</span>
+                <span class="stat-value">7</span>
+            </div>
+        </section>
+    </main>
+    <footer class="footer">
+        <span class="footer-message">Stay motivated. Every step counts.</span>
+    </footer>
+    <div id="modal-backdrop" class="modal-backdrop" style="display:none;"></div>
+    <div id="modal" class="modal" style="display:none;">
+        <button class="modal-close" aria-label="Close">&times;</button>
+        <div class="modal-content"></div>
     </div>
     <script src="script.js"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('sw.js');
-        });
-      }
-    </script>
 </body>
 </html> 
