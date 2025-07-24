@@ -1,7 +1,7 @@
 {
   "name": "TodayCounted",
   "short_name": "TodayCounted",
-  "start_url": "/habit-tracker/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#8e44ad",
