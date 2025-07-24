@@ -6,7 +6,6 @@ const themeKey = 'todaycounted_theme';
 const goalsList = document.getElementById('goals-list');
 const addGoalForm = document.getElementById('add-goal-form');
 const goalInput = document.getElementById('goal-input');
-const statValue = document.querySelector('.stat-value');
 const themeToggle = document.querySelector('.theme-toggle');
 const body = document.body;
 const modal = document.getElementById('modal');
@@ -14,6 +13,7 @@ const modalBackdrop = document.getElementById('modal-backdrop');
 const modalContent = document.querySelector('.modal-content');
 const modalClose = document.querySelector('.modal-close');
 const addGoalBtn = document.querySelector('.add-goal-btn');
+const settingsBtn = document.querySelector('.settings-btn');
 
 function loadGoals() {
   return JSON.parse(localStorage.getItem(goalsKey) || '[]');
@@ -30,7 +30,6 @@ function getYesterday() {
   return d.toISOString().slice(0, 10);
 }
 function renderStreakBar(history, streak, lastDone) {
-  // Show last 30 days, most recent on right
   const days = 30;
   let bar = '';
   const today = getToday();
@@ -38,7 +37,8 @@ function renderStreakBar(history, streak, lastDone) {
     const idx = history.length - days + i;
     let cls = 'streak-segment';
     if (idx >= 0) {
-      if (history[idx]) {
+      const entry = history[idx];
+      if (entry === true || (entry && entry.skipped !== true && entry !== false)) {
         // If this is the rightmost segment and today is done, make it green
         if (i === days - 1 && lastDone === today) {
           cls += ' today-done';
@@ -46,6 +46,8 @@ function renderStreakBar(history, streak, lastDone) {
           cls += ' active';
         }
         if ((i+1) % 7 === 0) cls += ' milestone';
+      } else if (entry && entry.skipped === true) {
+        cls += ' skipped-reason';
       } else {
         cls += ' missed';
       }
@@ -65,28 +67,58 @@ function renderCalendar(goal) {
   let html = '<div class="goal-calendar"><div class="calendar-row calendar-header">';
   const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   dayNames.forEach(d => html += `<div class="calendar-cell calendar-header-cell">${d}</div>`);
-  html += '</div><div class="calendar-row">';
+  html += '</div>';
+
+  // Build a date-indexed map for history
+  const historyMap = {};
+  if (goal.history && goal.history.length > 0) {
+    let d = new Date(goal.created);
+    for (let i = 0; i < goal.history.length; i++) {
+      const dateStr = d.toISOString().slice(0, 10);
+      historyMap[dateStr] = goal.history[i];
+      d.setDate(d.getDate() + 1);
+    }
+  }
+
+  let dayOfWeek = 0;
+  html += '<div class="calendar-row">';
   for (let i = 0; i < firstDay; i++) {
     html += '<div class="calendar-cell empty"></div>';
+    dayOfWeek++;
   }
   for (let day = 1; day <= daysInMonth; day++) {
     const d = new Date(year, month, day);
     const dateStr = d.toISOString().slice(0, 10);
     let cellClass = 'calendar-cell';
+    let tooltip = '';
     if (dateStr > getToday()) {
       cellClass += ' future';
-    } else if (goal.history && goal.history.length > 0) {
-      // Map history to calendar: assume history is for last 30 days
-      const histIdx = goal.history.length - (getDayDiff(getToday(), dateStr)) - 1;
-      if (histIdx >= 0 && goal.history[histIdx]) {
+    } else if (historyMap[dateStr] !== undefined) {
+      const entry = historyMap[dateStr];
+      if (entry === true || (entry && entry.skipped !== true && entry !== false)) {
         cellClass += ' done';
-      } else if (histIdx >= 0) {
+      } else if (entry && entry.skipped === true) {
+        cellClass += ' missed skipped-reason';
+        if (entry.reason) tooltip = ` title="${entry.reason.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"`;
+      } else {
         cellClass += ' missed';
       }
+    } else {
+      cellClass += ' missed';
     }
     if (dateStr === getToday()) cellClass += ' today';
-    html += `<div class="${cellClass}">${day}</div>`;
-    if ((firstDay + day) % 7 === 0) html += '</div><div class="calendar-row">';
+    html += `<div class="${cellClass}"${tooltip}>${day}</div>`;
+    dayOfWeek++;
+    if (dayOfWeek === 7 && day !== daysInMonth) {
+      html += '</div><div class="calendar-row">';
+      dayOfWeek = 0;
+    }
+  }
+  // Fill in empty cells if the last week is incomplete
+  if (dayOfWeek > 0 && dayOfWeek < 7) {
+    for (let i = dayOfWeek; i < 7; i++) {
+      html += '<div class="calendar-cell empty"></div>';
+    }
   }
   html += '</div></div>';
   return html;
@@ -99,9 +131,7 @@ function getDayDiff(date1, date2) {
 }
 function renderGoals(goals) {
   goalsList.innerHTML = '';
-  let longest = 0;
   goals.forEach(goal => {
-    if (goal.streak > longest) longest = goal.streak;
     const card = document.createElement('div');
     card.className = 'goal-card';
     card.innerHTML = `
@@ -128,7 +158,6 @@ function renderGoals(goals) {
     card.querySelector('.streak-bar').addEventListener('click', streakBarClickHandler(goal));
     goalsList.appendChild(card);
   });
-  statValue.textContent = longest;
 }
 function addGoal(name) {
   const goals = loadGoals();
@@ -163,19 +192,30 @@ function markDone(id) {
 function skipGoal(id) {
   const goals = loadGoals();
   const today = getToday();
-  goals.forEach(goal => {
-    if (goal.id == id) {
-      if (goal.lastDone !== today) {
-        goal.streak = 0;
-        goal.lastDone = today;
-        goal.history = goal.history || [];
-        goal.history.push(false);
-        if (goal.history.length > 30) goal.history.shift();
-      }
-    }
-  });
-  saveGoals(goals);
-  renderGoals(goals);
+  const goal = goals.find(g => g.id == id);
+  if (!goal) return;
+  if (goal.lastDone === today) return;
+  openModal(`
+    <form id="skip-reason-form">
+      <label for="skip-reason-input">Why are you skipping today?</label>
+      <textarea id="skip-reason-input" rows="3" placeholder="Optional reason..."></textarea>
+      <div style="display:flex;gap:1rem;justify-content:flex-end;">
+        <button type="submit" class="skip-btn modal-btn">Submit</button>
+      </div>
+    </form>
+  `);
+  document.getElementById('skip-reason-form').onsubmit = function(ev) {
+    ev.preventDefault();
+    const reason = document.getElementById('skip-reason-input').value.trim();
+    goal.streak = 0;
+    goal.lastDone = today;
+    goal.history = goal.history || [];
+    goal.history.push({ skipped: true, reason });
+    if (goal.history.length > 30) goal.history.shift();
+    saveGoals(goals);
+    renderGoals(goals);
+    closeModal();
+  };
 }
 function editGoal(id) {
   const goals = loadGoals();
@@ -220,17 +260,20 @@ function closeModal() {
     modalContent.innerHTML = '';
   }, 200);
 }
-modalClose.addEventListener('click', closeModal);
-modalBackdrop.addEventListener('click', closeModal);
-
+if (modalClose) {
+  modalClose.addEventListener('click', closeModal);
+}
+if (modalBackdrop) {
+  modalBackdrop.addEventListener('click', closeModal);
+}
 if (addGoalBtn) {
   addGoalBtn.addEventListener('click', () => {
     openModal(`
       <form id="add-goal-form-modal">
         <label for="goal-input-modal">Add a New Goal</label>
-        <input type="text" id="goal-input-modal" placeholder="e.g., Exercise daily" required style="margin-top:0.7rem;margin-bottom:1.2rem;">
+        <input type="text" id="goal-input-modal" placeholder="e.g., Exercise daily" required>
         <div style="display:flex;gap:1rem;justify-content:flex-end;">
-          <button type="submit" class="mark-done-btn" style="min-width:100px;">Add Goal</button>
+          <button type="submit" class="mark-done-btn modal-btn">Add Goal</button>
         </div>
       </form>
     `);
@@ -243,53 +286,54 @@ if (addGoalBtn) {
     };
   });
 }
-
-goalsList.addEventListener('click', e => {
-  if (e.target.closest('.mark-done-btn')) {
-    const id = e.target.closest('.mark-done-btn').dataset.id;
-    markDone(id);
-  } else if (e.target.closest('.skip-btn')) {
-    const id = e.target.closest('.skip-btn').dataset.id;
-    skipGoal(id);
-  } else if (e.target.closest('.edit-btn')) {
-    const id = e.target.closest('.edit-btn').dataset.id;
-    const goals = loadGoals();
-    const goal = goals.find(g => g.id == id);
-    if (!goal) return;
-    openModal(`
-      <form id="edit-goal-form">
-        <label for="edit-goal-input">Edit Goal Name</label>
-        <input type="text" id="edit-goal-input" value="${goal.name}" required style="margin-top:0.7rem;margin-bottom:1.2rem;">
-        <div style="display:flex;gap:1rem;justify-content:flex-end;">
-          <button type="submit" class="mark-done-btn" style="min-width:100px;">Save</button>
-          <button type="button" class="delete-btn" style="background:#ef4444;min-width:100px;">Delete</button>
-        </div>
-      </form>
-    `);
-    document.getElementById('edit-goal-form').onsubmit = function(ev) {
-      ev.preventDefault();
-      const newName = document.getElementById('edit-goal-input').value.trim();
-      if (!newName) return;
-      goal.name = newName;
-      saveGoals(goals);
-      renderGoals(goals);
-      closeModal();
-    };
-    document.querySelector('.delete-btn').onclick = function() {
-      if (confirm('Delete this goal?')) {
-        deleteGoal(id);
+if (goalsList) {
+  goalsList.addEventListener('click', e => {
+    if (e.target.closest('.mark-done-btn')) {
+      const id = e.target.closest('.mark-done-btn').dataset.id;
+      markDone(id);
+    } else if (e.target.closest('.skip-btn')) {
+      const id = e.target.closest('.skip-btn').dataset.id;
+      skipGoal(id);
+    } else if (e.target.closest('.edit-btn')) {
+      const id = e.target.closest('.edit-btn').dataset.id;
+      const goals = loadGoals();
+      const goal = goals.find(g => g.id == id);
+      if (!goal) return;
+      openModal(`
+        <form id="edit-goal-form">
+          <label for="edit-goal-input">Edit Goal Name</label>
+          <input type="text" id="edit-goal-input" value="${goal.name}" required>
+          <div style="display:flex;gap:1rem;justify-content:flex-end;">
+            <button type="submit" class="mark-done-btn modal-btn">Save</button>
+            <button type="button" class="delete-btn modal-btn">Delete</button>
+          </div>
+        </form>
+      `);
+      document.getElementById('edit-goal-form').onsubmit = function(ev) {
+        ev.preventDefault();
+        const newName = document.getElementById('edit-goal-input').value.trim();
+        if (!newName) return;
+        goal.name = newName;
+        saveGoals(goals);
+        renderGoals(goals);
         closeModal();
-      }
-    };
-  } else if (e.target.closest('.calendar-btn')) {
-    const card = e.target.closest('.goal-card');
-    const goals = loadGoals();
-    const id = e.target.closest('.calendar-btn').dataset.id;
-    const goal = goals.find(g => g.id == id);
-    if (!goal) return;
-    openModal(renderCalendar(goal));
-  }
-});
+      };
+      document.querySelector('.delete-btn').onclick = function() {
+        if (confirm('Delete this goal?')) {
+          deleteGoal(id);
+          closeModal();
+        }
+      };
+    } else if (e.target.closest('.calendar-btn')) {
+      const card = e.target.closest('.goal-card');
+      const goals = loadGoals();
+      const id = e.target.closest('.calendar-btn').dataset.id;
+      const goal = goals.find(g => g.id == id);
+      if (!goal) return;
+      openModal(renderCalendar(goal));
+    }
+  });
+}
 
 function setTheme(theme) {
   if (theme === 'light') {
@@ -312,43 +356,45 @@ function getThemeIcon() {
     : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b48be4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'; // sun
 }
 
-document.querySelector('.settings-btn').addEventListener('click', () => {
-  openModal(`
-    <h2 style="margin-bottom:1.2rem;">Settings</h2>
-    <div style="display:flex;flex-direction:column;gap:1.2rem;">
-      <div>
-        <label style="font-weight:600;">Theme:</label>
-        <button class="theme-icon-btn" style="margin-left:1rem;vertical-align:middle;">${getThemeIcon()}</button>
+if (settingsBtn) {
+  settingsBtn.addEventListener('click', () => {
+    openModal(`
+      <h2 style="margin-bottom:1.2rem;">Settings</h2>
+      <div style="display:flex;flex-direction:column;gap:1.2rem;">
+        <div>
+          <label style="font-weight:600;">Theme:</label>
+          <button class="theme-icon-btn modal-btn" style="margin-left:1rem;vertical-align:middle;">${getThemeIcon()}</button>
+        </div>
+        <div>
+          <button class="delete-btn modal-btn">Reset All Goals</button>
+        </div>
+        <div>
+          <button class="delete-btn modal-btn">Clear All Data</button>
+        </div>
       </div>
-      <div>
-        <button class="delete-btn" style="background:#ef4444;">Reset All Goals</button>
-      </div>
-      <div>
-        <button class="delete-btn" style="background:#444;">Clear All Data</button>
-      </div>
-    </div>
-  `);
-  document.querySelector('.modal .theme-icon-btn').onclick = () => {
-    toggleTheme();
-    // Update icon after theme change
-    setTimeout(() => {
-      document.querySelector('.modal .theme-icon-btn').innerHTML = getThemeIcon();
-    }, 50);
-  };
-  document.querySelectorAll('.modal .delete-btn')[0].onclick = () => {
-    if (confirm('Delete all goals?')) {
-      saveGoals([]);
-      renderGoals([]);
-      closeModal();
-    }
-  };
-  document.querySelectorAll('.modal .delete-btn')[1].onclick = () => {
-    if (confirm('Clear all data and reload?')) {
-      localStorage.clear();
-      location.reload();
-    }
-  };
-});
+    `);
+    document.querySelector('.modal .theme-icon-btn').onclick = () => {
+      toggleTheme();
+      // Update icon after theme change
+      setTimeout(() => {
+        document.querySelector('.modal .theme-icon-btn').innerHTML = getThemeIcon();
+      }, 50);
+    };
+    document.querySelectorAll('.modal .delete-btn')[0].onclick = () => {
+      if (confirm('Delete all goals?')) {
+        saveGoals([]);
+        renderGoals([]);
+        closeModal();
+      }
+    };
+    document.querySelectorAll('.modal .delete-btn')[1].onclick = () => {
+      if (confirm('Clear all data and reload?')) {
+        localStorage.clear();
+        location.reload();
+      }
+    };
+  });
+}
 
 // Streak bar click animation and modal
 function streakBarClickHandler(goal) {
@@ -381,10 +427,12 @@ function setTheme(theme) {
     localStorage.setItem(themeKey, 'dark');
   }
 }
-themeToggle.addEventListener('click', () => {
-  const isLight = body.classList.toggle('light-theme');
-  localStorage.setItem(themeKey, isLight ? 'light' : 'dark');
-});
+if (themeToggle) {
+  themeToggle.addEventListener('click', () => {
+    const isLight = body.classList.toggle('light-theme');
+    localStorage.setItem(themeKey, isLight ? 'light' : 'dark');
+  });
+}
 (function initTheme() {
   const theme = localStorage.getItem(themeKey);
   if (theme === 'light') body.classList.add('light-theme');
